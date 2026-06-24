@@ -119,7 +119,7 @@ curl -X POST http://localhost:5678/webhook-test/hitl-review \
 
 ### n8n workflow canvas
 
-![HITL workflow canvas](assets/screenshots/workflow_canvas.png)
+![HITL workflow canvas](assets/screenshots/n8n_canvas.png)
 
 **Workflow published and active:**
 
