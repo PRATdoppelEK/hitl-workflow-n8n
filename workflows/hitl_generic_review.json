@@ -1,0 +1,153 @@
+{
+  "name": "HITL Generic Review Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hitl-review",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        -160
+      ],
+      "id": "f41efc94-67ec-4076-840d-9705dd038db4",
+      "name": "Webhook",
+      "webhookId": "71af3c94-1f07-47b5-a472-3e67315d8e19"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# AI Classification — HITL Workflow\n# Reads incoming webhook data and adds AI classification + confidence score\n\nimport random\n\nfor item in _items:\n    data = item[\"json\"]\n    \n    # Simulate AI classification (replace with real model in production)\n    categories = [\"approved\", \"needs_review\", \"rejected\"]\n    weights = [0.5, 0.35, 0.15]\n    \n    ai_label = random.choices(categories, weights=weights)[0]\n    ai_confidence = round(random.uniform(0.55, 0.98), 2)\n    \n    # Add AI results to the item\n    item[\"json\"][\"ai_label\"] = ai_label\n    item[\"json\"][\"ai_confidence\"] = ai_confidence\n    item[\"json\"][\"requires_human_review\"] = ai_confidence < 0.80\n    item[\"json\"][\"workflow_stage\"] = \"ai_classified\"\n\nreturn _items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -160
+      ],
+      "id": "f3e1dad3-57c3-4e9f-8d68-314b0f154c89",
+      "name": "Code in Python"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cb27eb57-aac1-4ae9-a16d-c877ad1a2f16",
+              "leftValue": "={{ $json.requires_human_review }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        -160
+      ],
+      "id": "27767dba-bee8-48cf-87b4-8c8558ee58da",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# TRUE branch — item requires human review\n# Flag it and prepare for human review queue\n\nfor item in _items:\n    item[\"json\"][\"workflow_stage\"] = \"pending_human_review\"\n    item[\"json\"][\"review_url\"] = \"http://localhost:5050\"\n    item[\"json\"][\"action_required\"] = \"Human review needed — AI confidence below 80%\"\n    item[\"json\"][\"priority\"] = \"HIGH\" if item[\"json\"].get(\"ai_confidence\", 0) < 0.65 else \"MEDIUM\"\n\nreturn _items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -256
+      ],
+      "id": "7549ebc4-a694-4a84-a11b-213880422c81",
+      "name": "Flag for Human Review"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# FALSE branch — high confidence, auto-approved\n# No human review needed\n\nfor item in _items:\n    item[\"json\"][\"workflow_stage\"] = \"auto_approved\"\n    item[\"json\"][\"action_required\"] = \"None — auto-approved by AI\"\n    item[\"json\"][\"approved_at\"] = \"auto\"\n    item[\"json\"][\"priority\"] = \"LOW\"\n\nreturn _items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -64
+      ],
+      "id": "b3be1dbd-6a0a-4632-8321-32774936364d",
+      "name": "Auto Approve"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Flag for Human Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auto Approve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d0be68ec-4183-482a-aad7-c59920036759",
+  "meta": {
+    "instanceId": "606c7e4d1f250a430fdc86bf66766c937f99558c94580fb29d99aa3359fcc5ea"
+  },
+  "nodeGroups": [],
+  "id": "y2mTVIiPEsftaCpw",
+  "tags": []
+}
